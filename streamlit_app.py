@@ -47,33 +47,39 @@ def main():
     """, unsafe_allow_html=True)
 
     def display_banner():
-        uploaded_image = st.file_uploader("Optional: Upload Header Image", type=["jpg", "jpeg", "png", "webp"])
-        if uploaded_image:
-            encoded = base64.b64encode(uploaded_image.read()).decode()
-            banner_html = f"""
-                <div style='width:100%; padding:10px 0; background-color:{bg_color}; text-align:left;'>
-                    <img src='data:image/webp;base64,{encoded}' style='height:35px; margin-left:15px;'>
-                </div>
-            """
-            st.markdown(banner_html, unsafe_allow_html=True)
+        image_path = "header_image.webp"
+        if os.path.exists(image_path):
+            with open(image_path, "rb") as image_file:
+                encoded = base64.b64encode(image_file.read()).decode()
+                banner_html = f"""
+                    <div style='width:100%; padding:10px 0; background-color:{bg_color}; text-align:left;'>
+                        <img src='data:image/webp;base64,{encoded}' style='height:35px; margin-left:15px;'>
+                    </div>
+                """
+                st.markdown(banner_html, unsafe_allow_html=True)
 
     display_banner()
 
     st.markdown(f"<h2 style='color:{font_color}; font-weight:600;'>Org ID to Name CSV Converter</h2>", unsafe_allow_html=True)
     st.markdown(f"<p style='color:{font_color};'>Upload the Org Mapping file and either use the latest downloaded Scan Report or upload one manually.</p>", unsafe_allow_html=True)
 
-    org_map_file = st.file_uploader("Upload Org Mapping CSV (with $distinct_id and $name)", type="csv")
+    org_map_file = st.file_uploader("Upload Org Mapping CSV", type="csv")
     use_latest_file = st.checkbox("Use latest downloaded Scan Report")
     scan_data_file = None
 
     if use_latest_file:
-        download_dir = st.text_input("Path to your Downloads folder", value="/app/downloads")
-        pattern = os.path.join(download_dir, "Scan-2621196-*.csv")
-        matching_files = sorted(glob.glob(pattern), reverse=True)
-        if matching_files:
-            scan_data_file = matching_files[0]
-        else:
-            st.warning("No matching Scan Report file found in the specified Downloads folder.")
+        if "last_download_dir" not in st.session_state:
+            st.session_state["last_download_dir"] = "/app/downloads"
+
+        download_dir = st.text_input("Path to your Downloads folder", value=st.session_state["last_download_dir"])
+        if st.button("Apply Downloads Folder Path"):
+            pattern = os.path.join(download_dir, "Scan-2621196-*.csv")
+            matching_files = sorted(glob.glob(pattern), reverse=True)
+            if matching_files:
+                scan_data_file = matching_files[0]
+                st.session_state["last_download_dir"] = download_dir
+            else:
+                st.warning("No matching Scan Report file found in the specified Downloads folder.")
     else:
         uploaded_file = st.file_uploader("Upload Scan Report CSV (with org_id)", type="csv")
         if uploaded_file is not None:
